@@ -1,6 +1,6 @@
 $logtime=Get-Date -Format yyyyMMddhhmm
-$findFilesFoldersOutput = "C:\KchOps-Automations\Analyst Scripts\Test\Logs\log_$logtime.html";
-$ServerList=Get-Content -Path "C:\KchOps-Automations\Analyst Scripts\Test\ServerList.txt"
+$findFilesFoldersOutput = "C:\Scripts\Test\Logs\log_$logtime.html";
+$ServerList=Get-Content -Path "C:\Scripts\Test\ServerList.txt"
 
 foreach($ServerName in $ServerList)
 {
