@@ -1,0 +1,6 @@
+# Controlling system locale
+
+less /usr/share/i18n/locales/en_CA
+localectl status
+localectl list-locales
+localectl set-locale LANG=en_CA.utf8
