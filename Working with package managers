@@ -1,0 +1,15 @@
+# on Ubuntu
+less /etc/apt/sources.list
+apt list --all-versions | wc
+apt update
+apt search business card | less
+apt show glabels
+apt install glabels
+apt-get install glabels [don't run]
+
+
+# on CentOS
+yum list vino
+yum info vino
+yum install vino
+yum info trousers
