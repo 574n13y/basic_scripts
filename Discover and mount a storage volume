@@ -1,0 +1,4 @@
+df -ht ext4
+lsblk | grep sd
+sudo mkdir /media/newplace
+sudo mount /dev/sdb2 /media/newplace
