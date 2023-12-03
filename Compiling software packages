@@ -1,0 +1,7 @@
+sudo apt install linux-source linux-headers-`uname -r` build-essential make gcc automake cmake
+wget https://nmap.org/dist/nmap-7.93.tgz
+tar xzf nmap-7.93.tgz
+cd nmap-7.93
+./configure
+make
+sudo make install
