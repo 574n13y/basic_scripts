@@ -1,0 +1,5 @@
+sudo apt install lxd
+sudo lxd init
+sudo lxc launch images:rockylinux/9/amd64 rocky
+sudo lxc list
+sudo lxc exec rocky /bin/bash
