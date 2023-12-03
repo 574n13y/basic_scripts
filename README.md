@@ -9,3 +9,12 @@
 - [plan.sh]()
 
 # Linux Command 
+
+ - [Controlling system locale]()
+ - [Compiling software packages]()
+ - [system timezone]()
+ - [Working with package managers]()
+ - [Working with LXD containers]()
+ - [Launching Docker]()
+ - [Install and launch Apache]()
+ - [Discover and mount a storage volume]()
