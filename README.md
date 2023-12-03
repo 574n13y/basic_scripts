@@ -7,3 +7,5 @@
 - [apply.sh]()
 - [destroy.sh]()
 - [plan.sh]()
+
+# Linux Command 
