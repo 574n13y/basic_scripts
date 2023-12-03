@@ -1,0 +1,12 @@
+# Launching a Docker container
+docker build -t webserver .
+docker images
+docker run -d webserver
+
+# Dockerfile contents:
+FROM ubuntu:18.04
+RUN apt-get update
+RUN apt-get install -y apache2
+ADD index.html /var/www/html/
+CMD /usr/sbin/apache2ctl -D FOREGROUND
+EXPOSE 80
