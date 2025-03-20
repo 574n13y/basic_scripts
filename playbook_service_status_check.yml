@@ -1,0 +1,121 @@
+---
+name: Service Status Check Playbook
+description: Automates the process of checking the status of critical services within a specific deployment.
+version: 1.0.0
+author: vivesh
+
+# Define global variables
+vars:
+  services:
+    - nginx 
+    - opensearch 
+    - tomcat 
+    - splunk 
+    - wfc
+  workspace_path: "/path/to/your/workspace" # Change this to your actual workspace path
+  # PROJECT_NAME and TENANT_ID would typically be set dynamically,
+  #  e.g., from environment variables or user input.  For this static
+  #  example, I'll add placeholders.
+  project_name: "pr0-test-cd"      #  Change this
+  tenant_id: "dev01"            #  Change this
+  release_branch: "devlopment"  # Change this
+
+# Tasks to be executed in the playbook
+tasks:
+  - name: Source get_instance_path.sh
+    shell:
+      cmd: "source get_instance_path.sh"
+    register: get_instance_path_result
+    # Error handling:  This is a *critical* step.  If this fails,
+    #  the rest of the playbook will likely fail.  Consider
+    #  adding a more robust error handling mechanism, such
+    #  as:
+    #  - Checking the return code of the shell command.
+    #  - Using a 'when' condition in subsequent tasks to
+    #    skip them if this task failed.
+    #  For this example, I'll keep it simple and rely on the
+    #  'register' output.
+
+  - name: Change to Workspace Directory
+    shell:
+      cmd: "cd {{ workspace_path }}/pro-test-cd"
+    register: cd_workspace_result
+    #  Error handling is important here too.
+    #  A more robust approach might involve checking the
+    #  return code and potentially retrying or exiting.
+
+  - name: Find Deployment Directory
+    shell:
+      cmd: "DEPLOYMENT_DIRECTORY_PATH=$(find_instance_path '{{ project_name }}' '{{ tenant_id }}')"
+    register: find_deployment_dir_result
+    #  Check for an empty DEPLOYMENT_DIRECTORY_PATH.
+    #  The original script echoes a message and exits.  We
+    #  should do something similar here.
+
+  - name: Change to Script Directory
+    shell:
+      cmd: "cd $(dirname get_instance_path.sh)" # Assumes this playbook is in the same directory
+    register: cd_script_dir_result
+
+  - name: Export Deployment Path
+    shell:
+      cmd: "export DEPLOYMENT_DIRECTORY_PATH={{ find_deployment_dir_result.stdout }}"
+    register: export_deployment_path_result
+
+  - name: Define SERVICE_RELEASE
+    shell:
+      cmd: |
+        SERVICE_RELEASE=$(echo "{{ release_branch }}" | tr '[:upper:]' '[:lower:]' | sed -E 's/\./d/g; s/[^a-z0-9]/_/g')
+        echo "SERVICE_RELEASE=$SERVICE_RELEASE" #Print to standard output
+    register: define_service_release_result
+
+  - name: Export TF_VAR_GHA_SERVICE_RELEASE
+    shell:
+      cmd: "export TF_VAR_GHA_SERVICE_RELEASE={{ define_service_release_result.stdout.split('=')[1] }}"
+    register: export_tf_var_result
+
+  - name: Initialize Terragrunt
+    shell:
+      cmd: "terragrunt init"
+    register: terragrunt_init_result
+
+  - name: Run Terragrunt Plan (Destroy)
+    shell:
+      cmd: "terragrunt plan --destroy -var 'SERVICE_RELEASE={{ define_service_release_result.stdout.split('=')[1] }}' -var 'DEPLOYMENT_NAME={{ tenant_id }}'"
+    register: terragrunt_plan_result
+
+  - name: Run Terragrunt Destroy
+    shell:
+      cmd: "terragrunt destroy -auto-approve -var 'SERVICE_RELEASE={{ define_service_release_result.stdout.split('=')[1] }}' -var 'DEPLOYMENT_NAME={{ tenant_id }}'"
+    register: terragrunt_destroy_result
+
+  - name: Check Service Status
+    shell:
+      cmd: |
+        #!/bin/bash
+        SERVICES=("nginx" "opensearch" "tomcat" "splunk" "wfc")
+        check_service_status() {
+          local service_name="$1"
+          if command -v systemctl &> /dev/null; then
+            if systemctl is-active --quiet "$service_name"; then
+              echo "$service_name: Running"
+            else
+              echo "$service_name: Stopped"
+            fi
+          elif command -v service &> /dev/null; then
+            if service "$service_name" status &> /dev/null ; then
+              echo "$service_name: Running"
+            else
+              echo "$service_name: Stopped"
+            fi
+          elif pgrep -x "$service_name" > /dev/null; then
+            echo "$service_name: Running (process check)"
+          else
+            echo "$service_name: Not found"
+          fi
+        }
+        echo "Checking service status:"
+        for service in "\${SERVICES[@]}"; do
+          check_service_status "$service"
+        done
+    register: service_status_check_result
