@@ -33,7 +33,7 @@ check_service_status() {
 
 source "$(dirname $0)"/get_instance_path.sh
 
-cd "${WORKSPACE_PATH}"/pro-wfm-vrs-cd || exit
+cd "${WORKSPACE_PATH}"/pro-test-cd || exit
 
 if ! DEPLOYMENT_DIRECTORY_PATH=$(find_instance_path "$PROJECT_NAME" "$TENANT_ID"); then
   echo "No instance found for $PROJECT_NAME and $TENANT_ID."
