@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the services to check
-SERVICES=("nginx" "opensearch" "tomcat" "")
+SERVICES=("nginx" "opensearch" "tomcat" "splunk" "wfc")
 
 # Function to check the status of a service
 check_service_status() {
