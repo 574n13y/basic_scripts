@@ -42,23 +42,22 @@
     - name: Report Service Status (systemctl)
       debug:
         msg: "{{ item.item }}: {{ 'Running' if item.status.ActiveState == 'active' else 'Stopped' }}"
-      loop: "{{ service_status_systemd.results }}"
+      loop: "{{ service_status_systemd.results | default([]) }}"
       when: ansible_service_mgr == 'systemd' and service_status_systemd is defined
 
     - name: Report Service Status (service)
       debug:
         msg: "{{ item.item }}: {{ 'Running' if item.status.ActiveState == 'active' else 'Stopped' }}"
-      loop: "{{ service_status_service.results }}"
+      loop: "{{ service_status_service.results | default([]) }}"
       when: ansible_service_mgr == 'sysvinit' or ansible_service_mgr == 'upstart' and service_status_service is defined
 
     - name: Report Service Status (process check)
       debug:
         msg: "{{ item.item }}: {{ 'Running (process check)' if item.rc == 0 else 'Not Running' }}"
-      loop: "{{ service_status_pgrep.results }}"
+      loop: "{{ service_status_pgrep.results | default([]) }}"
       when: ansible_service_mgr != 'systemd' and ansible_service_mgr != 'sysvinit' and ansible_service_mgr != 'upstart' and service_status_pgrep is defined
 
     - name: Report Service Status (not found)
       debug:
         msg: "{{ item }}: Not found"
-      loop: "{{ services_to_check | difference(service_status_systemd.results | map(attribute='item') | list + service_status_service.results | map(attribute='item') | list + service_status_pgrep.results | map(attribute='item') | list) }}"
-      when: ansible_service_mgr != 'systemd' and ansible_service_mgr != 'sysvinit' and ansible_service_mgr != 'upstart' and service_status_systemd is defined and service_status_service is defined and service_status_pgrep is defined or ansible_service_mgr == 'systemd' and service_status_systemd is defined or ansible_service_mgr == 'sysvinit' or ansible_service_mgr == 'upstart' and service_status_service is defined
+      loop: "{{ services_to_check | difference((service_status_systemd.results | default([]) | map: 'item' | list) + (service_status_service.results | default([]) | map: 'item' | list) + (service_status_pgrep.results | default([]) | map: 'item' | list)) }}"
