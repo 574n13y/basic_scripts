@@ -1,0 +1,52 @@
+---
+- name: Manage Services
+  hosts: all
+  become: true
+  vars:
+    services_to_manage:
+      - name: nginx
+        state: started  # Can be started, stopped, restarted
+      - name: opensearch
+        state: restarted
+      - name: tomcat
+        state: stopped
+      - name: splunk
+        state: started
+      - name: wfc
+        state: restarted
+
+  tasks:
+    - name: Manage Services (systemd)
+      systemd:
+        name: "{{ item.name }}"
+        state: "{{ item.state }}"
+      loop: "{{ services_to_manage }}"
+      when: ansible_service_mgr == 'systemd'
+
+    - name: Manage Services (service)
+      service:
+        name: "{{ item.name }}"
+        state: "{{ item.state }}"
+      loop: "{{ services_to_manage }}"
+      when: ansible_service_mgr == 'sysvinit' or ansible_service_mgr == 'upstart'
+
+    - name: Check Service Status After Action (systemd)
+      systemd:
+        name: "{{ item.name }}"
+      register: service_status
+      loop: "{{ services_to_manage }}"
+      when: ansible_service_mgr == 'systemd'
+
+    - name: Check Service Status After Action (service)
+      service:
+        name: "{{ item.name }}"
+      register: service_status
+      loop: "{{ services_to_manage }}"
+      when: ansible_service_mgr == 'sysvinit' or ansible_service_mgr == 'upstart'
+
+    - name: Report Service Status After Action
+      debug:
+        msg: "{{ item.item.name }}: {{ item.item.state }} - {{ service_status.results[item.index].status.ActiveState | default(service_status.results[item.index].status.Status) }}"
+      loop: "{{ services_to_manage | zip(range(services_to_manage | length)) | list }}"
+      loop_control:
+        index_var: index
