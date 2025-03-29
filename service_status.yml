@@ -1,0 +1,64 @@
+---
+- name: Check Service Status
+  hosts: all  # Or specify your target hosts
+  become: true  # Required for service commands
+
+  tasks:
+    - name: Define Services to Check
+      set_fact:
+        services_to_check:
+          - nginx
+          - opensearch
+          - tomcat
+          - splunk
+          - wfc
+
+    - name: Check Service Status (systemctl)
+      systemd:
+        name: "{{ item }}"
+        state: started #this will fail if not started, so we use ignore_errors
+      register: service_status_systemd
+      loop: "{{ services_to_check }}"
+      ignore_errors: true
+      when: ansible_service_mgr == 'systemd'
+
+    - name: Check Service Status (service)
+      service:
+        name: "{{ item }}"
+        state: started #this will fail if not started, so we use ignore_errors
+      register: service_status_service
+      loop: "{{ services_to_check }}"
+      ignore_errors: true
+      when: ansible_service_mgr == 'sysvinit' or ansible_service_mgr == 'upstart'
+
+    - name: Check Service Status (process check)
+      command: pgrep -x "{{ item }}"
+      register: service_status_pgrep
+      loop: "{{ services_to_check }}"
+      ignore_errors: true
+      changed_when: false
+      when: ansible_service_mgr != 'systemd' and ansible_service_mgr != 'sysvinit' and ansible_service_mgr != 'upstart'
+
+    - name: Report Service Status (systemctl)
+      debug:
+        msg: "{{ item.item }}: {{ 'Running' if item.status.ActiveState == 'active' else 'Stopped' }}"
+      loop: "{{ service_status_systemd.results }}"
+      when: ansible_service_mgr == 'systemd' and service_status_systemd is defined
+
+    - name: Report Service Status (service)
+      debug:
+        msg: "{{ item.item }}: {{ 'Running' if item.status.ActiveState == 'active' else 'Stopped' }}"
+      loop: "{{ service_status_service.results }}"
+      when: ansible_service_mgr == 'sysvinit' or ansible_service_mgr == 'upstart' and service_status_service is defined
+
+    - name: Report Service Status (process check)
+      debug:
+        msg: "{{ item.item }}: {{ 'Running (process check)' if item.rc == 0 else 'Not Running' }}"
+      loop: "{{ service_status_pgrep.results }}"
+      when: ansible_service_mgr != 'systemd' and ansible_service_mgr != 'sysvinit' and ansible_service_mgr != 'upstart' and service_status_pgrep is defined
+
+    - name: Report Service Status (not found)
+      debug:
+        msg: "{{ item }}: Not found"
+      loop: "{{ services_to_check | difference(service_status_systemd.results | map(attribute='item') | list + service_status_service.results | map(attribute='item') | list + service_status_pgrep.results | map(attribute='item') | list) }}"
+      when: ansible_service_mgr != 'systemd' and ansible_service_mgr != 'sysvinit' and ansible_service_mgr != 'upstart' and service_status_systemd is defined and service_status_service is defined and service_status_pgrep is defined or ansible_service_mgr == 'systemd' and service_status_systemd is defined or ansible_service_mgr == 'sysvinit' or ansible_service_mgr == 'upstart' and service_status_service is defined
